@@ -42,6 +42,10 @@
             transition: 1s;
             font-family: cursive;
             color: #ff3366;
+            text-align: center;
+            z-index: 1001;
+            font-size: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
         }
 
         /* Add heart rain styles */
@@ -81,70 +85,81 @@
             }
         }
 
-        /* Character styles */
-        .character {
+        /* Game control styles */
+        .game-control {
             position: fixed;
-            bottom: 20px;
-            font-size: 60px;
-            z-index: 10;
-        }
-
-        .boy {
-            left: 20px;
-        }
-
-        .girl {
-            right: 20px;
-        }
-
-        /* Draggable flower styles */
-        #draggableFlower {
-            position: fixed;
-            left: 100px;
-            bottom: 40px;
-            font-size: 40px;
-            cursor: grab;
-            z-index: 10;
-            transition: transform 0.3s;
-            user-select: none;
-        }
-
-        #draggableFlower:active {
-            cursor: grabbing;
-        }
-
-        /* Message styles */
-        #message {
-            font-size: 24px;
-            text-align: center;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 1000;
-            pointer-events: none;
+            padding: 10px 20px;
+            background: #ff3366;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: cursive;
+            font-size: 20px;
         }
 
-        .locked {
-            pointer-events: none !important;
+        .score-board {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            color: #ff3366;
+            font-family: cursive;
+            font-size: 20px;
+        }
+
+        .game-flower {
+            cursor: pointer;
+            animation: float 1s ease-in-out infinite;
+        }
+
+        @keyframes scaleUp {
+            from { transform: translate(-50%, -50%) scale(0); }
+            to { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .hidden-message.animate-scale {
+            animation: scaleUp 1s ease-out;
         }
     </style>
 </head>
 <body>
     <div class="heart-rain" id="heartRain"></div>
-    
     <div id="garden"></div>
 
-    <!-- Add characters and message -->
-    <div class="character boy">👦🇫🇷</div>
-    <div class="character girl">👧🇨🇳</div>
-    <div class="hidden-message" id="message">Friendship Blossoms Across Continents! 💖</div>
-    <div id="draggableFlower">🌸</div>
-    
+    <!-- Game Controls -->
+    <button id="gameControl" class="game-control">Start Game</button>
+    <div class="score-board">
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 0</div>
+        <div id="highScore">High Score: 0</div>
+    </div>
+
     <script>
-        // 
-        // 
         // Flower colors and templates
-        //
-        //
         const colors = ['#ff3366', '#ff99bb', '#ff66a3', '#ff1493'];
         const flowerTemplates = ['🌸', '🌺', '🌷', '🌹', '💐'];
+
+        // Predefined success messages
+        const successMessages = [
+            "🎉 Happy Valentine's day, <b>Catarina</b>! 🎉",
+            "🎉 情人节快乐，Miss.陈梦瑶! 🎉",
+            "🎉 有没有仪式感？ 🎉",
+            "🎉 好好学习，天天向上! 🎉",
+            "🎉 毕业就和这个游戏一样简单! 🎉"
+        ];
+
+        // Predefined failure messages
+        const failureMessages = [
+            "😢 Time's up! Try again!",
+            "😢 You should be better than that!",
+            "😢 Better luck next time!",
+            "😢 Don't give up!"
+        ];
 
         // Function to create heart rain
         function createHeartRain() {
@@ -165,183 +180,136 @@
         // Start the heart rain
         createHeartRain();
 
-        //
-        //
-        // Drawing flowers and hearts
-        //
-        //
-        let isDrawing = false;
-        let currentX = 0;
-        let currentY = 0;
-        let drawInterval;
+        // Game state variables
+        let isGameActive = false;
+        let score = 0;
+        let timeLeft = 30;
+        let highScore = localStorage.getItem('highScore') || 0; // Load high score from localStorage
+        let gameInterval;
+        let flowerInterval;
+        const gameFlowers = [];
 
-        function createFlower(x, y) {
-            const flower = document.createElement('div');
-            flower.className = 'flower';
-            flower.style.left = x + 'px';
-            flower.style.top = y + 'px';
+        // Game control elements
+        const gameControl = document.getElementById('gameControl');
+        const scoreElement = document.getElementById('score');
+        const timerElement = document.getElementById('timer');
+        const highScoreElement = document.getElementById('highScore');
+
+        // Initialize high score display
+        highScoreElement.textContent = `Quickest time: ${highScore} s`;
+
+        // Modify existing click handler to ignore game flowers
+        document.addEventListener('click', (e) => {
+            if (!isGameActive) {
+                createFlower(e.clientX - 25, e.clientY - 25);
+            }
+        });
+
+        // Game control button handler
+        gameControl.addEventListener('click', startGame);
+
+        function startGame() {
+            if (isGameActive) return;
             
-            // Random flower parameters
-            const scale = Math.random() * 0.5 + 0.5;
-            const rotation = Math.random() * 360;
+            // Remove existing messages
+            document.querySelectorAll('.hidden-message').forEach(msg => msg.remove());
+            
+            // Reset game state
+            isGameActive = true;
+            score = 0;
+            timeLeft = 30;
+            gameControl.style.display = 'none'; // Hide the start button
+            scoreElement.textContent = `Score: ${score}`;
+            timerElement.textContent = `Time: ${timeLeft}`;
+            
+            // Clear existing game flowers
+            gameFlowers.forEach(flower => flower.remove());
+            gameFlowers.length = 0;
+
+            // Start game intervals with faster flower creation
+            flowerInterval = setInterval(createGameFlower, 500); // Faster appearance
+            gameInterval = setInterval(updateGame, 1000);
+        }
+
+        function createGameFlower() {
+            const flower = document.createElement('div');
+            flower.className = 'flower game-flower';
+            flower.style.left = Math.random() * (window.innerWidth - 50) + 'px';
+            flower.style.top = Math.random() * (window.innerHeight - 50) + 'px';
             
             flower.innerHTML = `
                 <div class="petals" style="
-                    transform: scale(${scale}) rotate(${rotation}deg);
+                    transform: scale(0.7);
                     color: ${colors[Math.floor(Math.random()*colors.length)]};
-                    font-size: ${Math.random()*30 + 20}px;
+                    font-size: 50px; /* Bigger flowers */
                 ">
                     ${flowerTemplates[Math.floor(Math.random()*flowerTemplates.length)]}
                 </div>
             `;
             
-            document.getElementById('garden').appendChild(flower);
+            flower.addEventListener('click', () => {
+                if (!isGameActive) return;
+                score++;
+                scoreElement.textContent = `Score: ${score}`;
+                flower.remove();
+                if (score >= 10) endGame(true);
+            });
 
-            // Remove flowers after 5 seconds for performance
+            // Make the flower disappear after 3 seconds
             setTimeout(() => {
-                flower.classList.add('fade-out'); // Add the fade-out class
-                setTimeout(() => flower.remove(), 2000); // Remove element after animation completes
-            }, 3000); // Delay before fade-out starts
-        }
-
-        // Event handlers for desktop
-        document.addEventListener('mousedown', (e) => {
-            isDrawing = true;
-            currentX = e.clientX;
-            currentY = e.clientY;
-            startDrawing();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if(isDrawing) {
-                currentX = e.clientX;
-                currentY = e.clientY;
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDrawing = false;
-            stopDrawing();
-        });
-
-        // Event handlers for mobile
-        document.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            isDrawing = true;
-            currentX = e.touches[0].clientX;
-            currentY = e.touches[0].clientY;
-            startDrawing();
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if(isDrawing) {
-                currentX = e.touches[0].clientX;
-                currentY = e.touches[0].clientY;
-            }
-        });
-
-        document.addEventListener('touchend', () => {
-            isDrawing = false;
-            stopDrawing();
-        });
-
-        function startDrawing() {
-            // Initial creation
-            createFlower(currentX - 25, currentY - 25);
-            
-            // Create continuously while holding
-            drawInterval = setInterval(() => {
-                if(isDrawing) {
-                    createFlower(currentX, currentY);
+                if (flower.parentElement) {
+                    flower.remove();
                 }
-            }, 100); // Adjust interval (milliseconds) for creation speed
+            }, 3000);
+
+            document.getElementById('garden').appendChild(flower);
+            gameFlowers.push(flower);
         }
 
-        function stopDrawing() {
-            clearInterval(drawInterval);
-        }
-
-        // Add draggable flower functionality
-        const draggableFlower = document.getElementById('draggableFlower');
-        const message = document.getElementById('message');
-        const girl = document.querySelector('.girl');
-        let isDragging = false;
-        let startX, startY, initialX, initialY;
-
-        // Touch and mouse events for dragging
-        draggableFlower.addEventListener('mousedown', startDrag);
-        draggableFlower.addEventListener('touchstart', startDrag);
-        
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('touchmove', drag);
-        
-        document.addEventListener('mouseup', endDrag);
-        document.addEventListener('touchend', endDrag);
-
-        function startDrag(e) {
-            e.stopPropagation();
-            isDragging = true;
-            draggableFlower.style.cursor = 'grabbing';
+        function updateGame() {
+            timeLeft--;
+            timerElement.textContent = `Time: ${timeLeft}`;
             
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            initialX = clientX - draggableFlower.offsetLeft;
-            initialY = clientY - draggableFlower.offsetTop;
-        }
-
-        function drag(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            const newX = clientX - initialX;
-            const newY = clientY - initialY;
-            
-            draggableFlower.style.left = `${newX}px`;
-            draggableFlower.style.top = `${newY}px`;
-        }
-
-        function endDrag(e) {
-            if (!isDragging) return;
-            isDragging = false;
-            draggableFlower.style.cursor = 'grab';
-
-            // Check if flower is near the girl
-            const flowerRect = draggableFlower.getBoundingClientRect();
-            const girlRect = girl.getBoundingClientRect();
-
-            if (checkCollision(flowerRect, girlRect)) {
-                // Snap flower to girl and show message
-                draggableFlower.style.left = `${girlRect.left - 60}px`;
-                draggableFlower.style.top = `${girlRect.top}px`;
-                message.style.opacity = '1';
-                message.style.fontSize = '2em';
-
-                // Lock all elements
-                document.querySelectorAll('.character, #draggableFlower').forEach(el => {
-                    el.classList.add('locked');
-                });
+            if (timeLeft <= 0) {
+                endGame(false);
             }
         }
 
-        function checkCollision(rect1, rect2) {
-            return (
-                rect1.left < rect2.right &&
-                rect1.right > rect2.left &&
-                rect1.top < rect2.bottom &&
-                rect1.bottom > rect2.top
-            );
-        }
+        function endGame(success) {
+            isGameActive = false;
+            clearInterval(flowerInterval);
+            clearInterval(gameInterval);
+            
+            // Remove all game flowers
+            gameFlowers.forEach(flower => flower.remove());
+            gameFlowers.length = 0;
 
-        // Modify existing click handler to ignore draggable flower
-        document.addEventListener('click', (e) => {
-            if (e.target !== draggableFlower) {
-                createFlower(e.clientX - 25, e.clientY - 25);
+            // Update high score if the current score is lower
+            if (success && timeLeft < highScore) {
+                highScore = timeLeft;
+                localStorage.setItem('highScore', highScore); // Save high score to localStorage
+                highScoreElement.textContent = `High Score: ${highScore}`;
             }
-        });
+
+            // Show result message
+            const message = document.createElement('div');
+            message.className = `hidden-message ${success ? 'animate-scale' : ''}`;
+            message.style.opacity = '1';
+
+            // Randomly pick a message
+            const randomMessage = success
+                ? successMessages[Math.floor(Math.random() * successMessages.length)]
+                : failureMessages[Math.floor(Math.random() * failureMessages.length)];
+
+            message.innerHTML = `
+                ${randomMessage}<br>
+                <button class="game-control" onclick="startGame()" style="margin-top:80px;">
+                    ${success ? 'Play Again' : 'Try Again'}
+                </button>
+            `;
+            
+            document.body.appendChild(message);
+        }
     </script>
 </body>
 </html>
