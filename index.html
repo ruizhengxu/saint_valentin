@@ -157,7 +157,7 @@
         const failureMessages = [
             "😢 Time's up! Try again!",
             "😢 You should be better than that!",
-            "😢 Better luck next time!",
+            "😢 加油加油!",
             "😢 Don't give up!"
         ];
 
@@ -184,7 +184,7 @@
         let isGameActive = false;
         let score = 0;
         let timeLeft = 30;
-        let highScore = localStorage.getItem('highScore') || 0; // Load high score from localStorage
+        let highScore = localStorage.getItem('highScore') || 99; // Load high score from localStorage
         let gameInterval;
         let flowerInterval;
         const gameFlowers = [];
