@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: #ffe6f2;
+            margin: 0;
+            overflow: hidden;
+            cursor: default;
+        }
+
+        .flower {
+            position: absolute;
+            transition: transform 0.5s;
+            animation: bloom 1s ease-out;
+        }
+
+        .flower.fade-out {
+            animation: fadeOut 2s forwards; /* Animation lasts 2 seconds */
+        }
+
+        .petals {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes bloom {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .hidden-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: 1s;
+            font-family: cursive;
+            color: #ff3366;
+        }
+
+        /* Add heart rain styles */
+        .heart-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1; /* Behind the intro and garden */
+            overflow: hidden; /* Prevent hearts from overflowing */
+        }
+
+        .heart {
+            position: absolute;
+            font-size: 20px;
+            color: #ff3366;
+            animation: fall linear infinite;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-100%); opacity: 0; }
+            10% { opacity: 0.3; }
+            90% { opacity: 1; }
+            100% { transform: translateY(100vh); opacity: 0; }
+        }
+
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+        }
+
+        /* Character styles */
+        .character {
+            position: fixed;
+            bottom: 20px;
+            font-size: 60px;
+            z-index: 10;
+        }
+
+        .boy {
+            left: 20px;
+        }
+
+        .girl {
+            right: 20px;
+        }
+
+        /* Draggable flower styles */
+        #draggableFlower {
+            position: fixed;
+            left: 100px;
+            bottom: 40px;
+            font-size: 40px;
+            cursor: grab;
+            z-index: 10;
+            transition: transform 0.3s;
+            user-select: none;
+        }
+
+        #draggableFlower:active {
+            cursor: grabbing;
+        }
+
+        /* Message styles */
+        #message {
+            font-size: 24px;
+            text-align: center;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .locked {
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="heart-rain" id="heartRain"></div>
+    
+    <div id="garden"></div>
+
+    <!-- Add characters and message -->
+    <div class="character boy">👦🇫🇷</div>
+    <div class="character girl">👧🇨🇳</div>
+    <div class="hidden-message" id="message">Friendship Blossoms Across Continents! 💖</div>
+    <div id="draggableFlower">🌸</div>
+    
+    <script>
+        // 
+        // 
+        // Flower colors and templates
+        //
+        //
+        const colors = ['#ff3366', '#ff99bb', '#ff66a3', '#ff1493'];
+        const flowerTemplates = ['🌸', '🌺', '🌷', '🌹', '💐'];
+
+        // Function to create heart rain
+        function createHeartRain() {
+            const heartRain = document.getElementById('heartRain');
+            const numHearts = 23; // Number of hearts to create
+
+            for (let i = 0; i < numHearts; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heart.innerHTML = '💖';
+                heart.style.left = Math.random() * 100 + 'vw'; // Random horizontal position
+                heart.style.animationDuration = Math.random() * 3 + 2 + 's'; // Random fall speed
+                heart.style.animationDelay = Math.random() * -5 + 's'; // Random delay
+                heartRain.appendChild(heart);
+            }
+        }
+
+        // Start the heart rain
+        createHeartRain();
+
+        //
+        //
+        // Drawing flowers and hearts
+        //
+        //
+        let isDrawing = false;
+        let currentX = 0;
+        let currentY = 0;
+        let drawInterval;
+
+        function createFlower(x, y) {
+            const flower = document.createElement('div');
+            flower.className = 'flower';
+            flower.style.left = x + 'px';
+            flower.style.top = y + 'px';
+            
+            // Random flower parameters
+            const scale = Math.random() * 0.5 + 0.5;
+            const rotation = Math.random() * 360;
+            
+            flower.innerHTML = `
+                <div class="petals" style="
+                    transform: scale(${scale}) rotate(${rotation}deg);
+                    color: ${colors[Math.floor(Math.random()*colors.length)]};
+                    font-size: ${Math.random()*30 + 20}px;
+                ">
+                    ${flowerTemplates[Math.floor(Math.random()*flowerTemplates.length)]}
+                </div>
+            `;
+            
+            document.getElementById('garden').appendChild(flower);
+
+            // Remove flowers after 5 seconds for performance
+            setTimeout(() => {
+                flower.classList.add('fade-out'); // Add the fade-out class
+                setTimeout(() => flower.remove(), 2000); // Remove element after animation completes
+            }, 3000); // Delay before fade-out starts
+        }
+
+        // Event handlers for desktop
+        document.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            currentX = e.clientX;
+            currentY = e.clientY;
+            startDrawing();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if(isDrawing) {
+                currentX = e.clientX;
+                currentY = e.clientY;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDrawing = false;
+            stopDrawing();
+        });
+
+        // Event handlers for mobile
+        document.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            currentX = e.touches[0].clientX;
+            currentY = e.touches[0].clientY;
+            startDrawing();
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if(isDrawing) {
+                currentX = e.touches[0].clientX;
+                currentY = e.touches[0].clientY;
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            isDrawing = false;
+            stopDrawing();
+        });
+
+        function startDrawing() {
+            // Initial creation
+            createFlower(currentX - 25, currentY - 25);
+            
+            // Create continuously while holding
+            drawInterval = setInterval(() => {
+                if(isDrawing) {
+                    createFlower(currentX, currentY);
+                }
+            }, 100); // Adjust interval (milliseconds) for creation speed
+        }
+
+        function stopDrawing() {
+            clearInterval(drawInterval);
+        }
+
+        // Add draggable flower functionality
+        const draggableFlower = document.getElementById('draggableFlower');
+        const message = document.getElementById('message');
+        const girl = document.querySelector('.girl');
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        // Touch and mouse events for dragging
+        draggableFlower.addEventListener('mousedown', startDrag);
+        draggableFlower.addEventListener('touchstart', startDrag);
+        
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag);
+        
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        function startDrag(e) {
+            e.stopPropagation();
+            isDragging = true;
+            draggableFlower.style.cursor = 'grabbing';
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            initialX = clientX - draggableFlower.offsetLeft;
+            initialY = clientY - draggableFlower.offsetTop;
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const newX = clientX - initialX;
+            const newY = clientY - initialY;
+            
+            draggableFlower.style.left = `${newX}px`;
+            draggableFlower.style.top = `${newY}px`;
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            draggableFlower.style.cursor = 'grab';
+
+            // Check if flower is near the girl
+            const flowerRect = draggableFlower.getBoundingClientRect();
+            const girlRect = girl.getBoundingClientRect();
+
+            if (checkCollision(flowerRect, girlRect)) {
+                // Snap flower to girl and show message
+                draggableFlower.style.left = `${girlRect.left - 60}px`;
+                draggableFlower.style.top = `${girlRect.top}px`;
+                message.style.opacity = '1';
+                message.style.fontSize = '2em';
+
+                // Lock all elements
+                document.querySelectorAll('.character, #draggableFlower').forEach(el => {
+                    el.classList.add('locked');
+                });
+            }
+        }
+
+        function checkCollision(rect1, rect2) {
+            return (
+                rect1.left < rect2.right &&
+                rect1.right > rect2.left &&
+                rect1.top < rect2.bottom &&
+                rect1.bottom > rect2.top
+            );
+        }
+
+        // Modify existing click handler to ignore draggable flower
+        document.addEventListener('click', (e) => {
+            if (e.target !== draggableFlower) {
+                createFlower(e.clientX - 25, e.clientY - 25);
+            }
+        });
+    </script>
+</body>
+</html>
